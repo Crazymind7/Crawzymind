@@ -2,18 +2,6 @@
 
 SuperMind is a web application that integrates a Django backend with a React frontend. It provides functionalities for analyzing website content, generating summaries, and handling video data.
 
-## Table of Contents
-
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [Project Structure](#project-structure)
-- [API Endpoints](#api-endpoints)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
-
 ## Features
 
 - Analyze website content and generate summaries
