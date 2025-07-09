@@ -46,14 +46,4 @@ SuperMind is a web application that integrates a Django backend with a React fro
    ```sh
    python manage.py runserver
    ```
-5. Running React Frontend (open another Terminal):
-   ```sh
-   cd UI/supermind-ui
-   ```
 
-   ```sh
-   npm install
-   ```
-   ```
-   npm start
-   ```
