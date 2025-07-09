@@ -11,8 +11,6 @@ SuperMind is a web application that integrates a Django backend with a React fro
 ## Prerequisites
 
 - Python 3.8+
-- Node.js 14+
-- npm 6+
 - pip (Python package installer)
 
 ## Installation
