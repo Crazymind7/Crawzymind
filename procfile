@@ -1,5 +1,1 @@
-web: gunicorn SuperMind.wsgi --log-file - 
-#or works good with external database
-web: python manage.py migrate && gunicorn SuperMind.wsgi
-
-web: python manage.py migrate && gunicorn SuperMind.wsgi:application --bind 0.0.0.0:$PORT --log-file -
+web: gunicorn SuperMind.wsgi --log-file -
