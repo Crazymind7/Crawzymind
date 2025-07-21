@@ -11,7 +11,6 @@ from google import genai
 from google.genai import types
 import google.generativeai as legacy_genai  # For legacy functions
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
-from youtube_transcript_api.proxies import GenericProxyConfig
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from dotenv import load_dotenv
@@ -33,21 +32,6 @@ client = genai.Client(api_key=API_KEY)
 
 # Configure legacy genai for backward compatibility
 legacy_genai.configure(api_key=API_KEY)
-
-# Set up proxy configuration for YouTube Transcript API to work around IP bans
-# This uses Webshare rotating residential proxies to bypass YouTube's IP blocking
-# For Railway deployment or other cloud providers that get blocked by YouTube
-PROXY_USERNAME = os.getenv("PROXY_USERNAME", "cmzixoik-rotate")
-PROXY_PASSWORD = os.getenv("PROXY_PASSWORD", "6l44sidlqlz0") 
-PROXY_HOST = os.getenv("PROXY_HOST", "p.webshare.io")
-PROXY_PORT = os.getenv("PROXY_PORT", "80")
-
-PROXY_CONFIG = GenericProxyConfig(
-    http_url=f"http://{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_HOST}:{PROXY_PORT}/",
-    https_url=f"http://{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_HOST}:{PROXY_PORT}/"
-)
-
-print(f"🌐 Proxy configuration initialized: {PROXY_HOST}:{PROXY_PORT}")
 
 # Function to convert a number to Base62 (shortened ID)
 def to_base62(num):
@@ -73,14 +57,8 @@ YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/"
 # Fetch YouTube video details function
 def fetch_youtube_details(video_id):
     try:
-        # Set up proxy for YouTube API requests
-        proxies = {
-            "http": f"http://{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_HOST}:{PROXY_PORT}/",
-            "https": f"http://{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_HOST}:{PROXY_PORT}/"
-        }
-        
         video_details_url = f"{YOUTUBE_API_URL}videos?part=snippet,contentDetails&id={video_id}&key={YOUTUBE_API_KEY}"
-        video_details_response = requests.get(video_details_url, proxies=proxies)
+        video_details_response = requests.get(video_details_url)
         video_details = video_details_response.json()
 
         if "items" not in video_details:
@@ -102,7 +80,7 @@ def fetch_youtube_details(video_id):
         )
 
         category_url = f"{YOUTUBE_API_URL}videoCategories?part=snippet&id={category_id}&key={YOUTUBE_API_KEY}"
-        category_response = requests.get(category_url, proxies=proxies)
+        category_response = requests.get(category_url)
         category_data = category_response.json()
         video_type = category_data["items"][0]["snippet"]["title"]
 
@@ -116,10 +94,9 @@ def fetch_youtube_details(video_id):
 def get_youtube_transcript(video_id: str, preferred_languages=['en-IN', 'en', 'mr', 'hi']) -> list:
     try:
         print(f"🔍 Listing transcripts for video ID: {video_id}")
-        print(f"🌐 Using proxy: {PROXY_HOST}:{PROXY_PORT}")
         
-        # Initialize YouTubeTranscriptApi with proxy configuration
-        ytt_api = YouTubeTranscriptApi(proxy_config=PROXY_CONFIG)
+        # Initialize YouTubeTranscriptApi
+        ytt_api = YouTubeTranscriptApi()
         transcripts = ytt_api.list(video_id)
 
         for t in transcripts:
@@ -160,11 +137,6 @@ def get_youtube_transcript(video_id: str, preferred_languages=['en-IN', 'en', 'm
 
     except Exception as e:
         print(f"❌ Error getting transcript: {e}")
-        # Log more details about the error
-        if "RequestBlocked" in str(e) or "IpBlocked" in str(e):
-            print("🚫 IP/Request blocked error detected - proxy may need rotation")
-        elif "429" in str(e):
-            print("🕒 Rate limit detected - retrying with proxy")
         return []
 
 def transcript_to_text(transcript_data: list) -> str:
@@ -422,38 +394,3 @@ def generate_keywords_and_summary(request):
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         return JsonResponse({"error": str(e)}, status=500)
-
-# Test function to verify proxy configuration works
-@csrf_exempt
-def test_proxy_connection(request):
-    """Test endpoint to verify proxy configuration is working"""
-    try:
-        # Test with a known video that has transcripts
-        test_video_id = "dQw4w9WgXcQ"  # Never Gonna Give You Up - Rick Astley
-        print(f"🧪 Testing proxy connection with video ID: {test_video_id}")
-        
-        ytt_api = YouTubeTranscriptApi(proxy_config=PROXY_CONFIG)
-        transcripts = ytt_api.list(test_video_id)
-        
-        available_transcripts = []
-        for t in transcripts:
-            available_transcripts.append({
-                'language': t.language,
-                'language_code': t.language_code,
-                'is_generated': t.is_generated
-            })
-        
-        return JsonResponse({
-            'status': 'success',
-            'message': 'Proxy connection working!',
-            'proxy_host': f"{PROXY_HOST}:{PROXY_PORT}",
-            'test_video_id': test_video_id,
-            'available_transcripts': available_transcripts
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Proxy test failed: {str(e)}',
-            'proxy_host': f"{PROXY_HOST}:{PROXY_PORT}"
-        }, status=500)

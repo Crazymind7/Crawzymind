@@ -5,5 +5,4 @@ from . import views
 urlpatterns = [
     path('generate-summary/', views.generate_keywords_and_summary, name='generate_summary'),
     path('test/', views.test_connection, name='test_connection'),
-    path('test-proxy/', views.test_proxy_connection, name='test_proxy_connection'),
 ]
